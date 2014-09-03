@@ -4,12 +4,18 @@ sap.m.TileContainer.extend("tts.DynamicTileContainer", {
 	metadata: {
 		properties: {
 			tilePath:  { type: "string", group: "Behaviour", default: "huhu" },
-			tileTemplate: { type: "sap.m.Tile", group: "Behaviour", default: null}
-		}
+			// tileTemplate:  { type: "sap.ui.core.Control", group: "Behaviour", default: {} },
+
+		},
+
+		aggregations: {"tileTemplate": { type: "sap.ui.core.Control", multiple : false, visibility: "public"}}
 	},
 
 
-
+	modelName : "",
+	model : {},
+	path : "",
+	baseContextPath : "",
 	rendered: false,
 
 	renderer: {}
@@ -19,46 +25,48 @@ tts.DynamicTileContainer.prototype.onAfterRendering = function(){
 
 	this.drawTiles();
 	sap.m.TileContainer.prototype.onAfterRendering.apply(this);
-
-	
 };
 
 
-tts.DynamicTileContainer.prototype.drawTiles = function(){
-		
-		var path = this.mProperties.tilePath;
-		var pathArray = path.split(">");
-		var pathModel;
-		var pathContext;
-		var coursePrograms = [];
-		if (pathArray.length > 1){
-			pathModel = pathArray[0];
-			pathContext = pathArray[1];
-			coursePrograms = this.oPropagatedProperties.oBindingContexts[pathModel].getObject()[pathContext];
-		} 
-		
-		// TODO: Support for not-named Models
-		
-		if(this.rendered === false){
-			this.removeAllTiles();
-			var tile;
-			for (var i = coursePrograms.length - 1; i >= 0; i--) {
-				tile = new sap.m.StandardTile({
-					title : coursePrograms[i].Title,
-					icon : "sap-icon://complete",
-					number : "0/" + coursePrograms[i].NumberOfElements 
-				});
-				// tile.getBindingContext().getObject();
-				tile.addStyleClass("tts-medium-tile");
-				this.addTile(tile);
-			}
-			this.rendered = true;
+tts.DynamicTileContainer.prototype.drawTiles = function(){	
+	var path = this.mProperties.tilePath;
+	var pathArray = path.split(">");
+	var coursePrograms = [];
+	var contexts = [];
+	if (pathArray.length > 1){
+		this.modelName = pathArray[0];
+		this.pathContext = pathArray[1];
+		contexts = this.oPropagatedProperties.oBindingContexts[this.modelName];
+		coursePrograms = this.oPropagatedProperties.oBindingContexts[this.modelName].getObject()[this.pathContext];
+		this.model = this.oPropagatedProperties.oBindingContexts[this.modelName].oModel;
+		this.baseContextPath = this.oPropagatedProperties.oBindingContexts[this.modelName].sPath;
+	} 
+	
+	// TODO: Support for not-named models
+	
+	if(this.rendered === false){
+		this.removeAllTiles();
+		var tile = this.mAggregations.tileTemplate;
+		for (var i = 0; i < coursePrograms.length - 1; i++) {
+			this._drawTile(tile, i);
 		}
-	};
+		this.rendered = true;
+	}
+};
+
+tts.DynamicTileContainer.prototype._drawTile = function(tile, iterator){
+	if (tile){
+		var newTile = tile.clone();
+		var path = this.baseContextPath + "/" + this.pathContext + "/" + iterator ;
+		newTile.setModel(this.model);
+		newTile.bindElement(path);
+		this.addTile(newTile);
+	}
+};
 
 tts.DynamicTileContainer.prototype._updateTilePositions = function(){
 
-	console.log("update mal die tilepositions");
+	console.log("ich update mal die tilepositions");
 
 	if (this.getTiles().length === 0) {	// no tiles
 		return;
